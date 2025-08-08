@@ -52,43 +52,45 @@ async function handleNavClick(event) {
 // Function to fetch and replace page content
 async function loadNewContent(url, scrollToTop = true) {
   try {
-    const response = await fetch(url);
+    // Correctly handle root and other pages by creating an absolute path
+    let path = url;
+    if (url === '/' || url === './') {
+      path = 'index.html';
+    } else if (!url.endsWith('.html')) {
+      // Ensure all other links point to a proper .html file
+      path = url.startsWith('/') ? url.substring(1) + '.html' : url + '.html';
+    }
+
+    console.log('Fetching URL:', path);
+
+    const response = await fetch(path);
+    if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+    }
     const html = await response.text();
     const parser = new DOMParser();
     const newDoc = parser.parseFromString(html, 'text/html');
 
-    // Find and replace the main content
     const newContentElement = newDoc.querySelector('.md-content__inner');
+    console.log('Content found in new page:', newContentElement ? 'Yes' : 'No');
+
     const mainContentElement = document.querySelector('.md-content__inner');
     if (mainContentElement && newContentElement) {
       mainContentElement.innerHTML = newContentElement.innerHTML;
+    } else {
+      console.warn('Cannot find content container in current page or new page.');
     }
 
-    // Find and replace the custom TOC
-    const newTocElement = newDoc.querySelector('.custom-sidebar-toc');
-    const tocElement = document.querySelector('.custom-sidebar-toc');
-    if (tocElement && newTocElement) {
-      tocElement.innerHTML = newTocElement.innerHTML;
-      // Re-attach event listeners to the new TOC links
-      attachTocLinkListeners();
-    }
-
-    // Update the header and page title
-    const newHeader = newDoc.querySelector('.custom-header-content').innerHTML;
-    const headerElement = document.querySelector('.custom-header-content');
-    if (headerElement) {
-      headerElement.innerHTML = newHeader;
-      // Re-attach nav link listeners to the new header
-      attachNavLinkListeners();
-    }
-
-    document.title = newDoc.title;
     if (scrollToTop) {
-      window.scrollTo(0, 0);
+      window.scrollTo({
+        top: 0,
+        behavior: 'smooth'
+      });
     }
+
   } catch (error) {
     console.error('Failed to load new content:', error);
-    // Fallback to a full page reload on error
+    // Fallback to a full page reload if dynamic load fails
     window.location.href = url;
   }
 }
@@ -98,7 +100,7 @@ function attachNavLinkListeners() {
   const navLinks = document.querySelectorAll('.nav-links a');
   navLinks.forEach(link => {
     link.addEventListener('click', handleNavClick);
-    
+
     // Add enhanced button interactions
     link.addEventListener('mouseenter', handleButtonHover);
     link.addEventListener('mouseleave', handleButtonLeave);
@@ -179,21 +181,21 @@ function updateActiveLinks(currentPath) {
   const allLinks = document.querySelectorAll('.nav-links a, .toc-list a');
   allLinks.forEach(link => {
     link.classList.remove('active');
-    
+
     // Reset nav button styles
     if (link.closest('.nav-links')) {
       link.style.transform = 'translateY(0) scale(1)';
     }
-    
+
     try {
       const linkPath = new URL(link.href).pathname;
       if (linkPath === currentPath) {
         link.classList.add('active');
-        
+
         // Add active animation for nav buttons
         if (link.closest('.nav-links')) {
           link.style.transform = 'translateY(-1px) scale(1)';
-          
+
           // Add a subtle pulse effect for active button
           setTimeout(() => {
             link.style.animation = 'activeButtonPulse 2s ease-in-out infinite';
@@ -218,16 +220,19 @@ function getCurrentPage() {
   const path = window.location.pathname.toLowerCase();
   const url = window.location.href.toLowerCase();
 
-  // More precise page detection - Fixed URL patterns
-  if (path.includes('/about') || url.includes('/about')) return 'about';
-  if (path.includes('/projects') || url.includes('/projects')) return 'projects';
-  if (path.includes('/skills') || url.includes('/skills')) return 'skills';
-  if (path.includes('/certifications') || url.includes('/certifications')) return 'certifications';
-  if (path.includes('/resume') || url.includes('/resume')) return 'resume';
-  if (path.includes('/experience') || url.includes('/experience')) return 'experience';
-  if (path.includes('/achievements') || path.includes('/Achievements')) return 'achievements';
+  // Correctly check the path to match the new URL format
+  if (path === '/' || path.includes('/index.html')) {
+    return 'home';
+  }
+  if (path.includes('/about.html')) return 'about';
+  if (path.includes('/projects.html')) return 'projects';
+  if (path.includes('/skills.html')) return 'skills';
+  if (path.includes('/certifications.html')) return 'certifications';
+  if (path.includes('/resume.html')) return 'resume';
+  if (path.includes('/experience.html')) return 'experience';
+  if (path.includes('/achievements.html')) return 'achievements';
 
-  // Default to home for root, index, or unclear paths
+  // Fallback
   return 'home';
 }
 
@@ -565,15 +570,16 @@ function createHeader() {
   const nav = document.createElement("div");
   nav.className = "nav-links";
 
+  // Use absolute paths for the links
   const links = [
-    { name: "🏠 Home", url: "../index.html", key: "home" },
-    { name: "👤 About", url: "../about/", key: "about" },
-    { name: "💼 Projects", url: "../projects/", key: "projects" },
-    { name: "🛠️ Skills", url: "../skills/", key: "skills" },
-    { name: "📜 Certifications", url: "../certifications/", key: "certifications" },
-    { name: "📄 Resume", url: "../resume/", key: "resume" },
-    { name: "💻 Experience", url: "../experience/", key: "experience" },
-    { name: "🏆 Achievements", url: "../achievements/", key: "achievements" }
+    { name: "🏠 Home", url: "/index.html", key: "home" },
+    { name: "👤 About", url: "/about.html", key: "about" },
+    { name: "💼 Projects", url: "/projects.html", key: "projects" },
+    { name: "🛠️ Skills", url: "/skills.html", key: "skills" },
+    { name: "📜 Certifications", url: "/certifications.html", key: "certifications" },
+    { name: "📄 Resume", url: "/resume.html", key: "resume" },
+    { name: "💻 Experience", url: "/experience.html", key: "experience" },
+    { name: "🏆 Achievements", url: "/achievements.html", key: "achievements" }
   ];
 
   const currentPage = getCurrentPage();
@@ -823,11 +829,11 @@ function addDynamicStyles() {
         }
       }
       @keyframes gradientShift {
-        0%, 100% { 
-          background-position: 0% 50%; 
+        0%, 100% {
+          background-position: 0% 50%;
         }
-        50% { 
-          background-position: 100% 50%; 
+        50% {
+          background-position: 100% 50%;
         }
       }
       .nav-links a:focus-visible {
