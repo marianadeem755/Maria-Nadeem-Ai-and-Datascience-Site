@@ -1,7 +1,8 @@
 site_name: "Maria Nadeem AI ML Engineer"
 site_description: "Showcasing innovative AI & Machine Learning projects and expertise"
 site_author: "Maria Nadeem"
-site_url: "https://marianadeem755.github.io"
+site_url: "https://marianadeem755.github.io/Maria-Nadeem-Ai-and-Datascience-Site/"
+use_directory_urls: false
 
 nav:
   - Home: index.md
